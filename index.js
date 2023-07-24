@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require("jsonwebtoken");
 const app = express();
 require('dotenv').config();
 const { MongoClient, ServerApiVersion } = require('mongodb');
@@ -24,6 +25,33 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const usersCollection = client.db("bookMyCampus").collection("users");
+    const collegesCollection = client.db("bookMyCampus").collection("colleges");
+
+    app.post("/jwt", (req, res) => {
+        const user = req.body;
+        const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+          expiresIn: "1h",
+        });
+        res.send({ token });
+      });
+
+      app.post("/users", async (req, res) => {
+        const user = req.body;
+        const query = { email: user.email };
+        const existingUser = await usersCollection.findOne(query);
+        if (existingUser) {
+          return res.send({ message: "User already exists" });
+        }
+        const result = await usersCollection.insertOne(user);
+        res.send(result);
+      });
+
+      app.get("/colleges", async (req, res) => {
+        const result = await collegesCollection.find().toArray();
+        res.send(result);
+      })
+
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
